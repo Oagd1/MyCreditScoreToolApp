@@ -41,25 +41,21 @@ export default function Navbar() {
           <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer" onClick={() => router.push("/")}>
             Home
           </li>
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">
-            Credit Health
-          </li>
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">
-            Offers
-          </li>
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">
-            Improve
-          </li>
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">
-            Protect
-          </li>
+          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Credit Health</li>
+          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Offers</li>
+          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Improve</li>
+          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Protect</li>
         </ul>
 
         {/* Profile Dropdown */}
         <div className="relative">
           {user ? (
             <button onClick={() => setIsOpen(!isOpen)} className="text-md flex items-center space-x-2">
-              <span>{user.email}</span>
+              <img
+                src={user.photoURL || "/default-avatar.png"} // Default avatar if no profile picture is set
+                alt="Profile"
+                className="w-10 h-10 rounded-full border border-white shadow-md"
+              />
               <span className="text-lg">⏷</span>
             </button>
           ) : (
