@@ -1,67 +1,127 @@
+// app/page.tsx
 "use client";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Box, Button, Typography } from "@mui/material";
+import { Person, CreditCard, Insights, CheckCircle } from "@mui/icons-material";
+import { auth } from "./config/firebase"; // Firebase authentication
 
 export default function Home() {
   const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const features = [
+    { icon: <CreditCard fontSize="large" className="text-blue-600" />, title: "A clearer picture", desc: "Checking your score gives you a clear view of how the financial world sees you when you make applications." },
+    { icon: <Insights fontSize="large" className="text-green-600" />, title: "Know where you stand", desc: "Avoid the shock of being rejected for credit by understanding how lenders may see you before you apply." },
+    { icon: <CheckCircle fontSize="large" className="text-purple-600" />, title: "Access to better deals", desc: "As you improve your credit score, you’ll have a better chance of getting credit at lower rates." }
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-gray-100 text-gray-900">
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-900">
       {/* Hero Section */}
-      <div className="w-full max-w-4xl text-center px-6 py-12">
-        {/* Brand Name */}
-        <h1 className="text-5xl font-extrabold text-blue-700">
+      <header className="w-full max-w-6xl mx-auto text-center px-6 py-16">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.6 }} 
+          className="text-5xl sm:text-6xl font-extrabold text-blue-700 tracking-wide"
+        >
           MyCreditScore
-        </h1>
-        <p className="text-lg text-gray-700 mt-4">
-          Take control of your financial health with accurate credit scores and smart insights.
-        </p>
-      </div>
+        </motion.h1>
+        <motion.p 
+          initial={{ opacity: 0, y: -10 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.8, delay: 0.2 }} 
+          className="text-lg sm:text-xl text-gray-700 mt-4 max-w-3xl mx-auto leading-relaxed"
+        >
+          Your <span className="font-bold">credit score & insights</span>, made simple. Get real-time updates,
+          personalized financial tips, and secure data protection—for free, forever.
+        </motion.p>
 
-      {/* Call to Action Buttons */}
-      <div className="mt-6 flex space-x-4">
-        <button
-          onClick={() => router.push("/signup")}
-          className="px-8 py-3 text-lg font-semibold text-white bg-blue-600 rounded-full shadow-md hover:bg-blue-700 transition"
+        {/* Call to Action */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          transition={{ duration: 0.5, delay: 0.3 }} 
+          className="mt-6 flex flex-wrap justify-center gap-4"
         >
-          Get Started
-        </button>
-        <button
-          onClick={() => router.push("/login")}
-          className="px-8 py-3 text-lg font-semibold text-blue-600 border border-blue-600 rounded-full hover:bg-blue-100 transition"
-        >
-          Log In
-        </button>
-      </div>
+          {user ? (
+            <Button
+              onClick={() => router.push("/dashboard")}
+              variant="contained"
+              size="large"
+              startIcon={<Person />}
+              className="bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-full shadow-lg transition-transform duration-300 ease-in-out"
+            >
+              Go to Dashboard
+            </Button>
+          ) : (
+            <>
+              <Button
+                onClick={() => router.push("/signup")}
+                variant="contained"
+                size="large"
+                className="bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-full shadow-lg transition-transform duration-300 ease-in-out"
+              >
+                Get Started
+              </Button>
+              <Button
+                onClick={() => router.push("/login")}
+                variant="outlined"
+                size="large"
+                className="text-blue-600 border border-blue-600 px-8 py-3 rounded-full shadow-md hover:bg-blue-100 transition-transform duration-300 ease-in-out"
+              >
+                Log In
+              </Button>
+            </>
+          )}
+        </motion.div>
+      </header>
 
       {/* Features Section */}
-      <div className="mt-12 w-full max-w-4xl text-center px-6">
-        <h2 className="text-3xl font-bold text-gray-800">Why Choose Us?</h2>
-        <p className="text-gray-600 mt-3">
-          We offer real-time credit score tracking, actionable insights, and a secure platform to help you achieve financial stability.
-        </p>
-
-        {/* Feature Highlights */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8">
-          <div className="p-6 bg-white shadow-lg rounded-xl border border-gray-200">
-            <h3 className="text-xl font-semibold text-blue-600">Free Credit Score</h3>
-            <p className="text-gray-600 mt-2">
-              Access your credit score at any time with complete transparency.
-            </p>
-          </div>
-          <div className="p-6 bg-white shadow-lg rounded-xl border border-gray-200">
-            <h3 className="text-xl font-semibold text-blue-600">Personalized Insights</h3>
-            <p className="text-gray-600 mt-2">
-              Get customized tips to improve your financial health.
-            </p>
-          </div>
-          <div className="p-6 bg-white shadow-lg rounded-xl border border-gray-200">
-            <h3 className="text-xl font-semibold text-blue-600">Secure & Private</h3>
-            <p className="text-gray-600 mt-2">
-              Your financial data is protected with industry-leading security.
-            </p>
-          </div>
+      <section className="w-full max-w-6xl mx-auto text-center px-6 py-12 bg-white bg-opacity-90 backdrop-blur-lg rounded-xl shadow-xl">
+        <motion.h2 
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.6 }} 
+          className="text-3xl font-bold text-gray-800"
+        >
+          Why it’s important to know your score
+        </motion.h2>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-8">
+          {features.map((feature, index) => (
+            <motion.div 
+              key={index} 
+              initial={{ opacity: 0, scale: 0.9 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              transition={{ duration: 0.5, delay: 0.2 * index }} 
+              className="p-6 bg-white rounded-2xl shadow-lg border border-gray-200 hover:shadow-2xl hover:-translate-y-1 transition-transform duration-300 ease-in-out"
+            >
+              <Box className="mb-4">{feature.icon}</Box>
+              <Typography variant="h6" fontWeight="bold" color="primary">
+                {feature.title}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" className="mt-2">
+                {feature.desc}
+              </Typography>
+            </motion.div>
+          ))}
         </div>
-      </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="mt-16 bg-gray-900 text-gray-300 py-10 text-center">
+        <Typography variant="body2">MyCreditScore &copy; {new Date().getFullYear()}</Typography>
+      </footer>
     </div>
   );
 }
