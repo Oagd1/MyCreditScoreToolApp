@@ -1,13 +1,17 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth, googleSignIn } from "../config/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { signUp } from "../config/firebase"; // Function from firebase.js
 
 export default function SignUp() {
   const router = useRouter();
+  const [userName, setUserName] = useState(""); // Updated from displayName
+  const [fullName, setFullName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -16,36 +20,33 @@ export default function SignUp() {
     setLoading(true);
     setError("");
 
-    // Password strength validation
+    // Validate input fields
+    if (!userName.trim() || !fullName.trim() || !dateOfBirth.trim() || !email.trim()) {
+      setError("All fields are required.");
+      setLoading(false);
+      return;
+    }
+
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       setLoading(false);
       return;
     }
 
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard"); // Redirect after successful sign-up
-    } catch (err: any) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("This email is already registered. Please log in.");
-      } else if (err.code === "auth/weak-password") {
-        setError("Password is too weak. Use at least 6 characters.");
-      } else {
-        setError("Sign-up failed. Please try again.");
-      }
-    } finally {
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       setLoading(false);
+      return;
     }
-  };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
     try {
-      await googleSignIn();
-      router.push("/dashboard"); // Redirect after Google sign-in
-    } catch (err) {
-      setError("Google Sign-In failed. Please try again.");
+      // Create account and store user details
+      await signUp(email, password, userName, fullName, dateOfBirth);
+      alert("✅ Sign-up successful! Redirecting to dashboard...");
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error("❌ Sign-up error:", err.message);
+      setError(err.message || "Sign-up failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -58,23 +59,77 @@ export default function SignUp() {
 
         {error && <p className="text-red-500 text-center mt-2">{error}</p>}
 
-        <form onSubmit={handleSignUp} className="mt-4">
+        <form onSubmit={handleSignUp} className="mt-4 space-y-3">
+          <input
+            type="text"
+            placeholder="Username"
+            className="w-full p-3 border rounded-lg"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Full Name"
+            className="w-full p-3 border rounded-lg"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+          />
+          <input
+            type="date"
+            className="w-full p-3 border rounded-lg"
+            value={dateOfBirth}
+            onChange={(e) => setDateOfBirth(e.target.value)}
+            required
+          />
           <input
             type="email"
             placeholder="Email"
-            className="w-full p-3 border rounded-lg mb-3"
+            className="w-full p-3 border rounded-lg"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <input
-            type="password"
-            placeholder="Password (6+ characters)"
-            className="w-full p-3 border rounded-lg mb-3"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+
+          {/* Password Input */}
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password (6+ characters)"
+              className="w-full p-3 border rounded-lg"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-3 text-gray-500"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? "🙈" : "👁️"}
+            </button>
+          </div>
+
+          {/* Confirm Password Input */}
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Confirm Password"
+              className="w-full p-3 border rounded-lg"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-3 text-gray-500"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? "🙈" : "👁️"}
+            </button>
+          </div>
+
           <button
             type="submit"
             className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition"
@@ -83,26 +138,6 @@ export default function SignUp() {
             {loading ? "Signing Up..." : "Sign Up"}
           </button>
         </form>
-
-        <div className="my-4 border-t border-gray-300"></div>
-
-        <button
-          onClick={handleGoogleSignIn}
-          className="w-full bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition"
-          disabled={loading}
-        >
-          {loading ? "Signing in with Google..." : "Sign Up with Google"}
-        </button>
-
-        <p className="mt-4 text-center text-gray-600">
-          Already have an account?{" "}
-          <span
-            className="text-blue-600 cursor-pointer hover:underline"
-            onClick={() => router.push("/login")}
-          >
-            Log in
-          </span>
-        </p>
       </div>
     </div>
   );

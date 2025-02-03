@@ -26,6 +26,14 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, [router]);
 
+  // Function to capitalize the first letter of the username
+  const capitalizeFirstLetter = (name: string) => {
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
+
+  // Extract and format username
+  const username = user?.email ? capitalizeFirstLetter(user.email.split("@")[0]) : "";
+
   // Credit Score Category
   const getScoreCategory = (score: number) => {
     if (score >= 650) return { label: "Excellent", color: "#4CAF50" };
@@ -80,7 +88,7 @@ export default function Dashboard() {
           className="text-5xl font-extrabold text-white mt-24"
           style={{ textShadow: "2px 2px 8px rgba(0, 0, 0, 0.6)" }}
         >
-          Welcome, {user?.email?.split("@")[0]}
+          Welcome, {username}
         </motion.h2>
 
         {/* Animated Credit Score Gauge */}
