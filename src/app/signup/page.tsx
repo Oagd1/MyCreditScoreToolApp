@@ -1,11 +1,14 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signUp } from "../config/firebase"; // Function from firebase.js
+import { auth, db, signUp } from "../config/firebase"; // Import auth & db
+import { doc, setDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword, UserCredential } from "firebase/auth"; // ✅ Import Firebase functions
+import { Eye, EyeOff } from "lucide-react"; // ✅ Import icons for password toggle
 
 export default function SignUp() {
   const router = useRouter();
-  const [userName, setUserName] = useState(""); // Updated from displayName
+  const [userName, setUserName] = useState("");
   const [fullName, setFullName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [email, setEmail] = useState("");
@@ -40,8 +43,26 @@ export default function SignUp() {
     }
 
     try {
-      // Create account and store user details
-      await signUp(email, password, userName, fullName, dateOfBirth);
+      // ✅ Proper Firebase Authentication Call
+      const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+      if (!userCredential.user) {
+        throw new Error("Sign-up failed. No user returned from Firebase.");
+      }
+
+      const user = userCredential.user; // ✅ Ensure user exists
+
+      // ✅ Store user details in Firestore
+      const userRef = doc(db, "users", user.uid);
+      await setDoc(userRef, {
+        uid: user.uid,
+        userName,
+        fullName,
+        dateOfBirth,
+        email,
+        createdAt: new Date(),
+      });
+
       alert("✅ Sign-up successful! Redirecting to dashboard...");
       router.push("/dashboard");
     } catch (err: any) {
@@ -92,12 +113,12 @@ export default function SignUp() {
             required
           />
 
-          {/* Password Input */}
+          {/* Password Input with Professional Toggle */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password (6+ characters)"
-              className="w-full p-3 border rounded-lg"
+              className="w-full p-3 border rounded-lg pr-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -107,16 +128,16 @@ export default function SignUp() {
               className="absolute right-3 top-3 text-gray-500"
               onClick={() => setShowPassword(!showPassword)}
             >
-              {showPassword ? "🙈" : "👁️"}
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
 
-          {/* Confirm Password Input */}
+          {/* Confirm Password Input with Professional Toggle */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Confirm Password"
-              className="w-full p-3 border rounded-lg"
+              className="w-full p-3 border rounded-lg pr-10"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
@@ -126,7 +147,7 @@ export default function SignUp() {
               className="absolute right-3 top-3 text-gray-500"
               onClick={() => setShowPassword(!showPassword)}
             >
-              {showPassword ? "🙈" : "👁️"}
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
 

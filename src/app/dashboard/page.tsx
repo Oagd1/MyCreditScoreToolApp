@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { auth } from "../config/firebase";
+import { auth, db } from "../config/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Box, Typography, CircularProgress } from "@mui/material";
@@ -10,32 +11,57 @@ import { CreditCard, Shield, TrendingUp } from "@mui/icons-material";
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [creditScore, setCreditScore] = useState<number>(667);
-  const [percentage, setPercentage] = useState<number>((creditScore / 710) * 100);
+  const [creditScore, setCreditScore] = useState<number | null>(null);
+  const [percentage, setPercentage] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // Listen for authentication changes
+    // ✅ Listen for Authentication Changes
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (!currentUser) {
         router.push("/"); // Redirect to homepage if not authenticated
       } else {
         setUser(currentUser);
+        fetchCreditScore(currentUser.uid); // Fetch Credit Score
       }
     });
 
     return () => unsubscribe();
   }, [router]);
 
-  // Function to capitalize the first letter of the username
+  // ✅ Fetch Credit Score from Firestore
+  const fetchCreditScore = async (uid: string) => {
+    try {
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists() && userSnap.data().creditScore !== undefined) {
+        const score = userSnap.data().creditScore;
+        setCreditScore(score);
+        setPercentage((score / 710) * 100);
+      } else {
+        setCreditScore(null); // No score calculated yet
+      }
+    } catch (err) {
+      console.error("Error fetching credit score:", err);
+      setError("Failed to load credit score.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Capitalize First Letter of Username
   const capitalizeFirstLetter = (name: string) => {
     return name.charAt(0).toUpperCase() + name.slice(1);
   };
 
-  // Extract and format username
+  // ✅ Extract and Format Username
   const username = user?.email ? capitalizeFirstLetter(user.email.split("@")[0]) : "";
 
-  // Credit Score Category
-  const getScoreCategory = (score: number) => {
+  // ✅ Determine Credit Score Category
+  const getScoreCategory = (score: number | null) => {
+    if (score === null) return { label: "N/A", color: "#B0BEC5" };
     if (score >= 650) return { label: "Excellent", color: "#4CAF50" };
     if (score >= 550) return { label: "Good", color: "#FFC107" };
     if (score >= 450) return { label: "Fair", color: "#FF9800" };
@@ -44,7 +70,7 @@ export default function Dashboard() {
 
   const scoreCategory = getScoreCategory(creditScore);
 
-  // Mock insights data
+  // ✅ Mock Insights Data
   const insights = [
     {
       id: 1,
@@ -74,13 +100,13 @@ export default function Dashboard() {
         backgroundAttachment: "fixed",
       }}
     >
-      {/* Dark Overlay for Better Visibility */}
+      {/* Dark Overlay */}
       <div className="absolute inset-0 bg-black bg-opacity-40"></div>
 
-      {/* Main Content Wrapper */}
+      {/* Main Content */}
       <div className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto px-6">
         
-        {/* Welcome Section */}
+        {/* Welcome Message */}
         <motion.h2
           initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -91,7 +117,7 @@ export default function Dashboard() {
           Welcome, {username}
         </motion.h2>
 
-        {/* Animated Credit Score Gauge */}
+        {/* Credit Score Gauge */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -101,7 +127,7 @@ export default function Dashboard() {
           <Box position="relative" display="inline-flex">
             <CircularProgress
               variant="determinate"
-              value={percentage}
+              value={creditScore !== null ? percentage : 0}
               size={180}
               thickness={5}
               sx={{ color: scoreCategory.color }}
@@ -118,7 +144,7 @@ export default function Dashboard() {
               }}
             >
               <Typography variant="h4" fontWeight="bold" color="white">
-                {creditScore}
+                {creditScore !== null ? creditScore : "N/A"}
               </Typography>
               <Typography
                 variant="subtitle1"
@@ -138,6 +164,10 @@ export default function Dashboard() {
         </motion.div>
 
         <p className="text-lg mt-4 font-medium text-white">Your current credit score</p>
+
+        {/* Error Message */}
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+
       </div>
 
       {/* Insights Section */}
@@ -152,14 +182,7 @@ export default function Dashboard() {
           {insights.map((insight) => (
             <motion.div
               key={insight.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 * insight.id }}
               className="p-6 bg-white shadow-lg rounded-xl flex flex-col items-center text-center hover:shadow-2xl transition transform hover:scale-105 duration-300"
-              style={{
-                backdropFilter: "blur(10px)",
-                backgroundColor: "rgba(255, 255, 255, 0.9)",
-              }}
             >
               {insight.icon}
               <h3 className="text-xl font-semibold text-gray-800 mt-4">{insight.title}</h3>
@@ -168,11 +191,6 @@ export default function Dashboard() {
           ))}
         </div>
       </motion.section>
-
-      {/* Footer */}
-      <footer className="relative bg-black text-white text-center py-6 bg-opacity-80 z-10 mt-12">
-        <p>MyCreditScore &copy; {new Date().getFullYear()}</p>
-      </footer>
     </div>
   );
 }
