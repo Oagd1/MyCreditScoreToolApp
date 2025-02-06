@@ -57,32 +57,37 @@ export default function CalculateScore() {
     let score = 710; // Max TransUnion score
 
     // ✅ Payment History (40%)
-    const missedPaymentsPenalty = data.missedPayments * 15;
-    const latePaymentsPenalty = data.latePayments * 10;
-    score -= (missedPaymentsPenalty + latePaymentsPenalty) * 0.4;
+    const missedPaymentsPenalty = data.missedPayments * 30; 
+    const latePaymentsPenalty = data.latePayments * 20; 
+    const defaultedLoansPenalty = data.defaultedLoans * 50; 
+    score -= (missedPaymentsPenalty + latePaymentsPenalty + defaultedLoansPenalty) * 0.4;
 
     // ✅ Credit Utilization (30%)
     const utilization = data.creditUtilization || 0;
     if (utilization > 30) {
-      score -= ((utilization - 30) * 2) * 0.3; // Higher utilization → Lower score
+      score -= ((utilization - 30) * 3) * 0.3; // Heavier penalty for high utilization
+    } else {
+      score += (30 - utilization) * 0.1; // Reward for low utilization
     }
 
     // ✅ Credit Age (10%)
     const creditAge = data.oldestAccountAge || 0;
-    score += Math.min(creditAge * 2, 10); // Older accounts = Higher score
+    score += Math.min(creditAge * 5, 50) * 0.1; // Older accounts = Higher score
 
     // ✅ Debt-to-Income Ratio (10%)
-    const debtToIncome = data.totalDebt / (data.monthlyIncome || 1); // Avoid division by zero
+    const debtToIncome = data.totalDebt / (data.monthlyIncome || 1);
     if (debtToIncome > 0.4) {
-      score -= (debtToIncome * 10) * 0.1; // Higher debt → Lower score
+      score -= (debtToIncome * 100) * 0.1; // Heavier penalty for high debt-to-income
+    } else {
+      score += (0.4 - debtToIncome) * 20; // Reward for low debt-to-income
     }
 
     // ✅ Recent Credit Applications (5%)
-    score -= data.recentInquiries * 5 * 0.05; // More applications → Slightly lower score
+    score -= data.recentInquiries * 10 * 0.05; 
 
     // ✅ Credit Mix (5%)
-    const creditMixScore = data.creditAccounts > 3 ? 10 : data.creditAccounts * 2;
-    score += creditMixScore * 0.05; // More variety = Higher score
+    const creditMixScore = data.creditAccounts >= 4 ? 20 : data.creditAccounts * 5;
+    score += creditMixScore * 0.05;
 
     return Math.max(0, Math.min(Math.round(score), 710)); // Ensure score is within 0-710 range
   };

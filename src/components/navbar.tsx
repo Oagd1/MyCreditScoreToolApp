@@ -38,10 +38,18 @@ export default function Navbar() {
 
         {/* Navigation Links */}
         <ul className="hidden md:flex space-x-6 text-lg font-semibold">
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer" onClick={() => router.push("/")}>
+          <li
+            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
+            onClick={() => router.push("/")}
+          >
             Home
           </li>
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Credit Health</li>
+          <li
+            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
+            onClick={() => router.push("/credit-health")} // ✅ Navigate to Credit Health
+          >
+            Credit Health
+          </li>
           <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Offers</li>
           <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Improve</li>
           <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Protect</li>

@@ -6,7 +6,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Box, Typography, CircularProgress } from "@mui/material";
-import { CreditCard, Shield, TrendingUp } from "@mui/icons-material";
+import { CreditCard, Shield, TrendingUp, ErrorOutline, CheckCircle } from "@mui/icons-material";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -15,51 +15,95 @@ export default function Dashboard() {
   const [percentage, setPercentage] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [insights, setInsights] = useState<any[]>([]);
 
   useEffect(() => {
-    // ✅ Listen for Authentication Changes
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (!currentUser) {
-        router.push("/"); // Redirect to homepage if not authenticated
+        router.push("/");
       } else {
         setUser(currentUser);
-        fetchCreditScore(currentUser.uid); // Fetch Credit Score
+        fetchUserData(currentUser.uid);
       }
     });
 
     return () => unsubscribe();
   }, [router]);
 
-  // ✅ Fetch Credit Score from Firestore
-  const fetchCreditScore = async (uid: string) => {
+  const fetchUserData = async (uid: string) => {
     try {
       const userRef = doc(db, "users", uid);
       const userSnap = await getDoc(userRef);
 
-      if (userSnap.exists() && userSnap.data().creditScore !== undefined) {
-        const score = userSnap.data().creditScore;
-        setCreditScore(score);
-        setPercentage((score / 710) * 100);
-      } else {
-        setCreditScore(null); // No score calculated yet
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setCreditScore(data.creditScore);
+        setPercentage((data.creditScore / 710) * 100);
+
+        if (data.onboarding) {
+          generateInsights(data.onboarding);
+        }
       }
     } catch (err) {
-      console.error("Error fetching credit score:", err);
-      setError("Failed to load credit score.");
+      console.error("Error fetching data:", err);
+      setError("Failed to load user data.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Capitalize First Letter of Username
-  const capitalizeFirstLetter = (name: string) => {
-    return name.charAt(0).toUpperCase() + name.slice(1);
+  const generateInsights = (data: any) => {
+    const dynamicInsights = [];
+
+    // ✅ Credit Utilization
+    if (data.creditUtilization < 30) {
+      dynamicInsights.push({
+        title: "Great Credit Utilization",
+        description: "You're maintaining a low credit usage, which boosts your score!",
+        icon: <CheckCircle sx={{ color: "green", fontSize: 40 }} />,
+      });
+    } else {
+      dynamicInsights.push({
+        title: "High Credit Utilization",
+        description: "Consider reducing your credit usage below 30% to improve your score.",
+        icon: <ErrorOutline sx={{ color: "red", fontSize: 40 }} />,
+      });
+    }
+
+    // ✅ Payment History
+    if (data.missedPayments === 0 && data.latePayments === 0) {
+      dynamicInsights.push({
+        title: "Excellent Payment History",
+        description: "No missed or late payments! This greatly improves your credit health.",
+        icon: <Shield sx={{ color: "blue", fontSize: 40 }} />,
+      });
+    } else {
+      dynamicInsights.push({
+        title: "Missed/Late Payments Detected",
+        description: "Try to make timely payments to boost your credit score.",
+        icon: <ErrorOutline sx={{ color: "orange", fontSize: 40 }} />,
+      });
+    }
+
+    // ✅ Debt-to-Income Ratio
+    const debtToIncome = data.totalDebt / (data.monthlyIncome || 1);
+    if (debtToIncome < 0.4) {
+      dynamicInsights.push({
+        title: "Healthy Debt-to-Income Ratio",
+        description: "Your debt is manageable relative to your income. Keep it up!",
+        icon: <TrendingUp sx={{ color: "purple", fontSize: 40 }} />,
+      });
+    } else {
+      dynamicInsights.push({
+        title: "High Debt-to-Income Ratio",
+        description: "Consider reducing your debt to improve financial health.",
+        icon: <ErrorOutline sx={{ color: "red", fontSize: 40 }} />,
+      });
+    }
+
+    setInsights(dynamicInsights);
   };
 
-  // ✅ Extract and Format Username
-  const username = user?.email ? capitalizeFirstLetter(user.email.split("@")[0]) : "";
-
-  // ✅ Determine Credit Score Category
   const getScoreCategory = (score: number | null) => {
     if (score === null) return { label: "N/A", color: "#B0BEC5" };
     if (score >= 650) return { label: "Excellent", color: "#4CAF50" };
@@ -69,28 +113,7 @@ export default function Dashboard() {
   };
 
   const scoreCategory = getScoreCategory(creditScore);
-
-  // ✅ Mock Insights Data
-  const insights = [
-    {
-      id: 1,
-      title: "Great Credit Utilization",
-      description: "You're maintaining a low credit usage. This boosts your score!",
-      icon: <CreditCard fontSize="large" sx={{ color: "blue" }} />,
-    },
-    {
-      id: 2,
-      title: "No Recent Credit Checks",
-      description: "Lenders see fewer hard inquiries as a positive sign.",
-      icon: <Shield fontSize="large" sx={{ color: "green" }} />,
-    },
-    {
-      id: 3,
-      title: "Your Score is Improving!",
-      description: "Your score has gone up by 20 points this month. Keep it up!",
-      icon: <TrendingUp fontSize="large" sx={{ color: "purple" }} />,
-    },
-  ];
+  const username = user?.email ? user.email.split("@")[0] : "User";
 
   return (
     <div
@@ -100,13 +123,9 @@ export default function Dashboard() {
         backgroundAttachment: "fixed",
       }}
     >
-      {/* Dark Overlay */}
       <div className="absolute inset-0 bg-black bg-opacity-40"></div>
 
-      {/* Main Content */}
       <div className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto px-6">
-        
-        {/* Welcome Message */}
         <motion.h2
           initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -117,7 +136,6 @@ export default function Dashboard() {
           Welcome, {username}
         </motion.h2>
 
-        {/* Credit Score Gauge */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -165,12 +183,9 @@ export default function Dashboard() {
 
         <p className="text-lg mt-4 font-medium text-white">Your current credit score</p>
 
-        {/* Error Message */}
         {error && <p className="text-red-500 mt-4">{error}</p>}
-
       </div>
 
-      {/* Insights Section */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -179,9 +194,9 @@ export default function Dashboard() {
       >
         <h2 className="text-3xl font-bold mb-6 text-gray-800">Latest Insights</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {insights.map((insight) => (
+          {insights.map((insight, index) => (
             <motion.div
-              key={insight.id}
+              key={index}
               className="p-6 bg-white shadow-lg rounded-xl flex flex-col items-center text-center hover:shadow-2xl transition transform hover:scale-105 duration-300"
             >
               {insight.icon}

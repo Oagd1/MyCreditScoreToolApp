@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db, signUp } from "../config/firebase"; // Import auth & db
+import { auth, db, signUp } from "../config/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword, UserCredential } from "firebase/auth"; // ✅ Import Firebase functions
-import { Eye, EyeOff } from "lucide-react"; // ✅ Import icons for password toggle
+import { createUserWithEmailAndPassword, UserCredential } from "firebase/auth";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function SignUp() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function SignUp() {
     setLoading(true);
     setError("");
 
-    // Validate input fields
+    // ✅ Input Validation
     if (!userName.trim() || !fullName.trim() || !dateOfBirth.trim() || !email.trim()) {
       setError("All fields are required.");
       setLoading(false);
@@ -43,16 +43,16 @@ export default function SignUp() {
     }
 
     try {
-      // ✅ Proper Firebase Authentication Call
+      // ✅ Firebase Authentication
       const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
 
       if (!userCredential.user) {
         throw new Error("Sign-up failed. No user returned from Firebase.");
       }
 
-      const user = userCredential.user; // ✅ Ensure user exists
+      const user = userCredential.user;
 
-      // ✅ Store user details in Firestore
+      // ✅ Store User Data in Firestore
       const userRef = doc(db, "users", user.uid);
       await setDoc(userRef, {
         uid: user.uid,
@@ -63,8 +63,8 @@ export default function SignUp() {
         createdAt: new Date(),
       });
 
-      alert("✅ Sign-up successful! Redirecting to dashboard...");
-      router.push("/dashboard");
+      alert("✅ Sign-up successful! Redirecting to onboarding...");
+      router.push("/onboarding"); // ✅ Redirect to Onboarding Page
     } catch (err: any) {
       console.error("❌ Sign-up error:", err.message);
       setError(err.message || "Sign-up failed. Please try again.");
@@ -113,7 +113,7 @@ export default function SignUp() {
             required
           />
 
-          {/* Password Input with Professional Toggle */}
+          {/* ✅ Password Field with Toggle */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -132,7 +132,7 @@ export default function SignUp() {
             </button>
           </div>
 
-          {/* Confirm Password Input with Professional Toggle */}
+          {/* ✅ Confirm Password Field */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
