@@ -40,7 +40,6 @@ export default function CreditHealth() {
         const score = userSnap.data().creditScore;
         setCreditScore(score);
 
-        // Simulated Historical Data
         const simulatedHistory = Array.from({ length: 6 }, (_, i) => {
           return score - Math.floor(Math.random() * 50) + i * 5;
         });
@@ -85,13 +84,11 @@ export default function CreditHealth() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
     >
-      {/* Hero Section */}
       <div className="bg-blue-700 text-white p-8 rounded-xl text-center shadow-lg mb-6">
         <h1 className="text-4xl font-bold mb-2">Start Understanding Your Credit Health</h1>
         <p className="text-lg">Analyze your credit score, track trends, and improve your financial well-being.</p>
       </div>
 
-      {/* Video Placeholder */}
       <motion.div
         className="bg-white p-4 rounded-lg shadow-md mb-6 text-center"
         initial={{ opacity: 0, scale: 0.9 }}
@@ -99,12 +96,19 @@ export default function CreditHealth() {
         transition={{ duration: 0.6 }}
       >
         <h2 className="text-2xl font-semibold mb-2">🎥 Welcome to Credit Health</h2>
-        <div className="bg-gray-300 h-48 rounded-md flex items-center justify-center text-gray-700 text-xl">
-          Video Placeholder
-        </div>
+        <iframe
+        width="100%"
+        height="400"
+        src="https://www.youtube.com/embed/DSqorm91Wgg"
+        title="Be Smart About Your Credit Health"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        className="rounded-md shadow-lg"
+        ></iframe>
+
       </motion.div>
 
-      {/* Credit Score Trend */}
       <motion.div
         className="bg-white p-6 rounded-lg shadow-md mb-6"
         initial={{ opacity: 0, x: -50 }}
@@ -115,7 +119,6 @@ export default function CreditHealth() {
         <Line data={lineChartData} />
       </motion.div>
 
-      {/* Credit Factor Breakdown */}
       <motion.div
         className="bg-white p-6 rounded-lg shadow-md mb-6"
         initial={{ opacity: 0, x: 50 }}
@@ -126,7 +129,6 @@ export default function CreditHealth() {
         <Bar data={barChartData} />
       </motion.div>
 
-      {/* Actionable Steps */}
       <motion.div
         className="bg-white p-4 rounded-lg shadow-md mb-6"
         initial={{ opacity: 0, y: 20 }}
@@ -141,7 +143,6 @@ export default function CreditHealth() {
         </ul>
       </motion.div>
 
-      {/* Dynamic Insights */}
       <motion.div
         className="bg-blue-50 p-4 rounded-md shadow-sm"
         initial={{ opacity: 0, y: 20 }}

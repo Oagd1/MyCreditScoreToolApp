@@ -46,13 +46,28 @@ export default function Navbar() {
           </li>
           <li
             className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
-            onClick={() => router.push("/credit-health")} // ✅ Navigate to Credit Health
+            onClick={() => router.push("/credit-health")}
           >
             Credit Health
           </li>
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Offers</li>
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Improve</li>
-          <li className="hover:text-blue-400 transition-all duration-300 cursor-pointer">Protect</li>
+          <li
+            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
+            onClick={() => router.push("/offers")}
+          >
+            Offers
+          </li>
+          <li
+            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
+            onClick={() => router.push("/improve-credit")}
+          >
+            Improve
+          </li>
+          <li
+            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
+            onClick={() => router.push("/protect")}
+          >
+            Protect
+          </li>
         </ul>
 
         {/* Profile Dropdown */}
@@ -60,7 +75,7 @@ export default function Navbar() {
           {user ? (
             <button onClick={() => setIsOpen(!isOpen)} className="text-md flex items-center space-x-2">
               <img
-                src={user.photoURL || "/default-avatar.png"} // Default avatar if no profile picture is set
+                src={user.photoURL || "/default-avatar.png"}
                 alt="Profile"
                 className="w-10 h-10 rounded-full border border-white shadow-md"
               />
