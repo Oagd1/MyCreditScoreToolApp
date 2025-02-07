@@ -20,6 +20,7 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 export default function ImproveCredit() {
   const [creditScore, setCreditScore] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState("Improve Your Score");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -76,58 +77,97 @@ export default function ImproveCredit() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
     >
+      {/* 🌟 Hero Section */}
       <div className="bg-green-700 text-white p-8 rounded-xl text-center shadow-lg mb-6">
         <h1 className="text-4xl font-bold mb-2">🌟 Improve Your Credit Score</h1>
         <p className="text-lg">Get personalized tips and actionable insights to boost your score.</p>
       </div>
 
+      {/* 🔀 Filter Tabs */}
+      <div className="flex justify-center space-x-4 mb-6">
+        {["Improve Your Score", "Credit Basics", "Avoid Mistakes", "Clear the Jargon"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-full transition ${
+              activeTab === tab ? "bg-green-600 text-white" : "bg-white text-gray-700"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {/* 🎥 Video Section */}
-      <motion.div
-        className="bg-white p-4 rounded-lg shadow-md mb-6 text-center"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6 }}
-      >
-        <h2 className="text-2xl font-semibold mb-4">🎥 Credit Tips for Students</h2>
-        <iframe
-          width="100%"
-          height="400"
-          src="https://www.youtube.com/embed/71iaNlskCc0"
-          title="Credit Tips for Students"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="rounded-md shadow-lg"
-        ></iframe>
-      </motion.div>
+      {activeTab === "Improve Your Score" && (
+        <motion.div
+          className="bg-white p-4 rounded-lg shadow-md mb-6 text-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-2xl font-semibold mb-4">🎥 Credit Tips for Students</h2>
+          <iframe
+            width="100%"
+            height="400"
+            src="https://www.youtube.com/embed/71iaNlskCc0"
+            title="Credit Tips for Students"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="rounded-md shadow-lg"
+          ></iframe>
+        </motion.div>
+      )}
 
       {/* 📊 Credit Factor Breakdown */}
-      <motion.div
-        className="bg-white p-6 rounded-lg shadow-md mb-6"
-        initial={{ opacity: 0, x: -50 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">📊 Credit Factor Breakdown</h2>
-        <Bar data={barChartData} />
-      </motion.div>
+      {activeTab === "Credit Basics" && (
+        <motion.div
+          className="bg-white p-6 rounded-lg shadow-md mb-6"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">📊 Credit Factor Breakdown</h2>
+          <Bar data={barChartData} />
+        </motion.div>
+      )}
 
       {/* ✅ Personalized Suggestions */}
-      <motion.div
-        className="bg-white p-4 rounded-lg shadow-md mb-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">✅ Personalized Suggestions</h2>
-        <ul className="space-y-4 text-gray-700">
-          {suggestions.map((suggestion, index) => (
-            <li key={index} className="flex items-center gap-2">
-              👉 {suggestion}
-            </li>
-          ))}
-        </ul>
-      </motion.div>
+      {activeTab === "Avoid Mistakes" && (
+        <motion.div
+          className="bg-white p-4 rounded-lg shadow-md mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">✅ Personalized Suggestions</h2>
+          <ul className="space-y-4 text-gray-700">
+            {suggestions.map((suggestion, index) => (
+              <li key={index} className="flex items-center gap-2">
+                👉 {suggestion}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+      )}
+
+      {/* 📚 Clear the Jargon (Glossary) */}
+      {activeTab === "Clear the Jargon" && (
+        <motion.div
+          className="bg-white p-4 rounded-lg shadow-md"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">📚 Credit Jargon Simplified</h2>
+          <ul className="list-disc ml-6 text-gray-700 space-y-2">
+            <li><strong>Credit Utilization:</strong> The ratio of your credit card balance to the credit limit.</li>
+            <li><strong>Hard Inquiry:</strong> A credit check that can slightly affect your credit score.</li>
+            <li><strong>Credit Mix:</strong> Having different types of credit accounts (e.g., loans, cards).</li>
+          </ul>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
