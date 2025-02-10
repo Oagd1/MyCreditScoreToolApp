@@ -32,8 +32,10 @@ export default function CalculateScore() {
         }
 
         const userData = userSnap.data().onboarding;
+        console.log("Fetched User Data:", userData); // Debug log
+
         const score = calculateCreditScore(userData);
-        setCreditScore(score);
+        setCreditScore(isNaN(score) ? null : score); // Handle NaN gracefully
 
         // ✅ Save the calculated score in Firestore
         await setDoc(userRef, { creditScore: score }, { merge: true });
@@ -52,42 +54,67 @@ export default function CalculateScore() {
     fetchFinancialData();
   }, [router]);
 
-  /** ✅ TransUnion Credit Score Calculation */
+  /** ✅ Updated TransUnion Credit Score Calculation */
   const calculateCreditScore = (data: any): number => {
-    let score = 710; // Max TransUnion score
+    let score = 300; // Base Score
+
+    // ✅ Prevent undefined values with defaults
+    const missedPayments = data.missedPayments || 0;
+    const latePayments = data.latePayments || 0;
+    const defaultedLoans = data.defaultedLoans || 0;
+    const creditUtilization = data.creditUtilization || 0;
+    const creditAccounts = data.creditAccounts || 0;
+    const oldestAccountAge = data.oldestAccountAge || 0;
+    const totalDebt = data.totalDebt || 0;
+    const monthlyIncome = data.monthlyIncome || 1; // Prevent division by zero
+    const availableCredit = data.availableCredit || 1; // Prevent division by zero
+    const recentInquiries = data.recentInquiries || 0;
 
     // ✅ Payment History (40%)
-    const missedPaymentsPenalty = data.missedPayments * 30; 
-    const latePaymentsPenalty = data.latePayments * 20; 
-    const defaultedLoansPenalty = data.defaultedLoans * 50; 
-    score -= (missedPaymentsPenalty + latePaymentsPenalty + defaultedLoansPenalty) * 0.4;
+    const paymentHistoryScore = (1 - (missedPayments * 0.03 + latePayments * 0.02 + defaultedLoans * 0.05)) * 284;
 
-    // ✅ Credit Utilization (30%)
-    const utilization = data.creditUtilization || 0;
-    if (utilization > 30) {
-      score -= ((utilization - 30) * 3) * 0.3; // Heavier penalty for high utilization
-    } else {
-      score += (30 - utilization) * 0.1; // Reward for low utilization
-    }
+    // ✅ Age & Credit Mix (21%)
+    const creditMixScore = Math.min(149, (creditAccounts * 7) + (oldestAccountAge / 120) * 70);
 
-    // ✅ Credit Age (10%)
-    const creditAge = data.oldestAccountAge || 0;
-    score += Math.min(creditAge * 5, 50) * 0.1; // Older accounts = Higher score
+    // ✅ Credit Utilization (20%)
+    const utilizationPenalty = creditUtilization > 30 ? (creditUtilization - 30) * 1.5 : 0;
+    const creditUtilizationScore = Math.max(0, 142 - utilizationPenalty);
 
-    // ✅ Debt-to-Income Ratio (10%)
-    const debtToIncome = data.totalDebt / (data.monthlyIncome || 1);
-    if (debtToIncome > 0.4) {
-      score -= (debtToIncome * 100) * 0.1; // Heavier penalty for high debt-to-income
-    } else {
-      score += (0.4 - debtToIncome) * 20; // Reward for low debt-to-income
-    }
+    // ✅ Balances (11%)
+    const balancePenalty = totalDebt > availableCredit * 0.5 ? (totalDebt - (availableCredit * 0.5)) * 0.05 : 0;
+    const balanceScore = Math.max(0, 78 - balancePenalty);
 
-    // ✅ Recent Credit Applications (5%)
-    score -= data.recentInquiries * 10 * 0.05; 
+    // ✅ New Credit (5%)
+    const newCreditPenalty = Math.min(35, recentInquiries * 7);
+    const newCreditScore = 35 - newCreditPenalty;
 
-    // ✅ Credit Mix (5%)
-    const creditMixScore = data.creditAccounts >= 4 ? 20 : data.creditAccounts * 5;
-    score += creditMixScore * 0.05;
+    // ✅ Available Credit (3%)
+    const availableCreditScore = Math.min(21, (availableCredit / (availableCredit + totalDebt)) * 21);
+
+    // ✅ Debt-to-Income Ratio (DTI) Penalty
+    const dti = (totalDebt / monthlyIncome) * 100;
+    const dtiPenalty = dti > 35 ? (dti - 35) * 1.2 : 0;
+
+    // ✅ Bonus System
+    const noMissedPaymentsBonus = missedPayments === 0 ? 20 : 0;
+    const lowUtilizationBonus = creditUtilization < 10 ? 15 : 0;
+    const creditAgeBonus = oldestAccountAge > 60 ? 10 : 0;
+
+    // ✅ Final Score Calculation
+    score += paymentHistoryScore;
+    score += creditMixScore;
+    score += creditUtilizationScore;
+    score += balanceScore;
+    score += newCreditScore;
+    score += availableCreditScore;
+
+    // Apply Penalties
+    score -= dtiPenalty;
+
+    // Apply Bonuses
+    score += (noMissedPaymentsBonus + lowUtilizationBonus + creditAgeBonus);
+
+    console.log("Calculated Score:", score); // Debug log
 
     return Math.max(0, Math.min(Math.round(score), 710)); // Ensure score is within 0-710 range
   };
@@ -101,6 +128,8 @@ export default function CalculateScore() {
           <p className="text-gray-600 mt-4">Calculating your score...</p>
         ) : error ? (
           <p className="text-red-500">{error}</p>
+        ) : creditScore === null ? (
+          <p className="text-red-500">Unable to calculate credit score. Please check your financial data.</p>
         ) : (
           <>
             <p className="text-4xl font-semibold mt-4">{creditScore}</p>
