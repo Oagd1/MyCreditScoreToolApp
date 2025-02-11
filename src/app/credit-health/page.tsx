@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Line, Bar } from "react-chartjs-2";
-import { motion } from "framer-motion";
+import * as framer from "framer-motion"; // Fixed Framer Motion Import
+const { motion } = framer;
+
 import { auth, db } from "../config/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
@@ -17,6 +19,7 @@ import {
   Legend,
 } from "chart.js";
 
+// Ensure proper Chart.js registration
 ChartJS.register(LineElement, BarElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
 export default function CreditHealth() {
@@ -97,16 +100,15 @@ export default function CreditHealth() {
       >
         <h2 className="text-2xl font-semibold mb-2">🎥 Welcome to Credit Health</h2>
         <iframe
-        width="100%"
-        height="400"
-        src="https://www.youtube.com/embed/DSqorm91Wgg"
-        title="Be Smart About Your Credit Health"
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        className="rounded-md shadow-lg"
+          width="100%"
+          height="400"
+          src="https://www.youtube.com/embed/DSqorm91Wgg"
+          title="Be Smart About Your Credit Health"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="rounded-md shadow-lg"
         ></iframe>
-
       </motion.div>
 
       <motion.div
