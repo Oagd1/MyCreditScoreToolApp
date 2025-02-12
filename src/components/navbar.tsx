@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { auth } from "../app/config/firebase";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "../components/ui/navigation-menu";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +36,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-black bg-opacity-80 text-white shadow-lg py-4 z-50">
+    <nav className="fixed top-0 left-0 w-full bg-black bg-opacity-90 text-white shadow-md py-4 z-50 backdrop-blur-md">
       <div className="max-w-6xl mx-auto flex justify-between items-center px-6">
         {/* Logo */}
         <h1
@@ -36,53 +46,78 @@ export default function Navbar() {
           MyCreditScore
         </h1>
 
-        {/* Navigation Links */}
-        <ul className="hidden md:flex space-x-6 text-lg font-semibold">
-          <li
-            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
-            onClick={() => router.push("/")}
-          >
-            Home
-          </li>
-          <li
-            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
-            onClick={() => router.push("/credit-health")}
-          >
-            Credit Health
-          </li>
-          <li
-            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
-            onClick={() => router.push("/offers")}
-          >
-            Offers
-          </li>
-          <li
-            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
-            onClick={() => router.push("/improve-credit")}
-          >
-            Improve
-          </li>
-          <li
-            className="hover:text-blue-400 transition-all duration-300 cursor-pointer"
-            onClick={() => router.push("/protect")}
-          >
-            Protect
-          </li>
-        </ul>
+        {/* ShadCN Navigation Menu */}
+        <NavigationMenu>
+          <NavigationMenuList className="flex space-x-6 text-lg font-semibold">
+            <NavigationMenuItem>
+              <Link href="/" passHref legacyBehavior>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  Home
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <NavigationMenuTrigger>Credit Health</NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="p-4 w-48">
+                  <li>
+                    <NavigationMenuLink
+                      asChild
+                      className="block px-4 py-2 hover:bg-gray-100 text-black rounded-md"
+                    >
+                      <Link href="/credit-health">Overview</Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                    <NavigationMenuLink
+                      asChild
+                      className="block px-4 py-2 hover:bg-gray-100 text-black rounded-md"
+                    >
+                      <Link href="/improve-credit">Improve Credit</Link>
+                    </NavigationMenuLink>
+                  </li>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <Link href="/offers" passHref legacyBehavior>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  Offers
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <Link href="/protect" passHref legacyBehavior>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  Protect
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
 
         {/* Profile Dropdown */}
         <div className="relative">
           {user ? (
-            <button onClick={() => setIsOpen(!isOpen)} className="text-md flex items-center space-x-2">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="flex items-center space-x-2"
+            >
               <img
                 src={user.photoURL || "/default-avatar.png"}
                 alt="Profile"
-                className="w-10 h-10 rounded-full border border-white shadow-md"
+                className="w-10 h-10 rounded-full border-2 border-white shadow-md"
               />
               <span className="text-lg">⏷</span>
             </button>
           ) : (
-            <button onClick={() => router.push("/login")} className="text-md font-semibold hover:text-blue-400">
+            <button
+              onClick={() => router.push("/login")}
+              className="text-md font-semibold hover:text-blue-400"
+            >
               Log In
             </button>
           )}
