@@ -2,7 +2,8 @@
 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "../components/navbar"; // ✅ Keep only the top navbar
+import Navbar from "../components/navbar";
+import { usePathname } from "next/navigation"; // ✅ Import for path checking
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,11 +18,20 @@ const geistMono = Geist_Mono({
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const pathname = usePathname(); // ✅ Get the current path
+
+  // ✅ Condition to hide navbar on login and signup pages
+  const hideNavbar = pathname === "/login" || pathname === "/signup";
+
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Navbar /> {/* ✅ Only the top navbar remains */}
-        <main className="pt-16">{children}</main> {/* Ensure space below navbar */}
+        {/* ✅ Conditionally Render Navbar */}
+        {!hideNavbar && <Navbar />}
+        
+        <main className={!hideNavbar ? "pt-16" : ""}>
+          {children}
+        </main>
       </body>
     </html>
   );
