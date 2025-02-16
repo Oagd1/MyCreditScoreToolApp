@@ -2,15 +2,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "../config/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, addDoc } from "firebase/firestore";
+import { format } from "date-fns"; // Ensure date-fns is installed
 
 export default function CalculateScore() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [creditScore, setCreditScore] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [dob, setDob] = useState(""); // Store formatted DOB
 
-  /** ✅ Fetch User Financial Data */
+  /** ✅ Fetch User Financial Data & Store Credit History */
   useEffect(() => {
     const fetchFinancialData = async () => {
       setLoading(true);
@@ -34,17 +36,34 @@ export default function CalculateScore() {
         const userData = userSnap.data().onboarding;
         console.log("Fetched User Data:", userData); // Debug log
 
-        const score = calculateCreditScore(userData);
-        setCreditScore(isNaN(score) ? null : score); // Handle NaN gracefully
+        // 🔹 Format DOB properly
+        const rawDob = userSnap.data().dateOfBirth || "";
+        const formattedDob = rawDob ? format(new Date(rawDob), "dd-MM-yyyy") : "N/A";
+        setDob(formattedDob); // Update state
 
-        // ✅ Save the calculated score in Firestore
-        await setDoc(userRef, { creditScore: score }, { merge: true });
+        // 🔥 Calculate New Credit Score
+        const calculatedScore = calculateCreditScore(userData);
+        setCreditScore(isNaN(calculatedScore) ? null : calculatedScore); // Handle NaN gracefully
 
+        // ✅ Save the latest score in Firestore
+        await setDoc(userRef, { creditScore: calculatedScore }, { merge: true });
+
+        // ✅ Ensure `creditHistory` subcollection exists & add historical record
+        const historyRef = collection(db, "users", user.uid, "creditHistory");
+        await addDoc(historyRef, {
+          timestamp: new Date().toISOString(), // Store full timestamp for better tracking
+          score: calculatedScore,
+        });
+
+        console.log("✅ Credit history updated in Firestore.");
+
+        // 🔥 Redirect after short delay
         setTimeout(() => {
-          router.push("/dashboard"); // Redirect after showing score
+          router.push("/dashboard");
         }, 5000);
+
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("❌ Error fetching data:", err);
         setError("Failed to load financial data.");
       } finally {
         setLoading(false);
@@ -54,7 +73,7 @@ export default function CalculateScore() {
     fetchFinancialData();
   }, [router]);
 
-  /** ✅ Updated TransUnion Credit Score Calculation */
+  /** ✅ Fixed: Define calculateCreditScore function properly */
   const calculateCreditScore = (data: any): number => {
     let score = 300; // Base Score
 
@@ -136,6 +155,7 @@ export default function CalculateScore() {
             <p className="text-gray-600 mt-2">
               Based on your financial data, your TransUnion-style credit score is calculated.
             </p>
+            <p className="text-gray-500 mt-4">Date of Birth: <strong>{dob}</strong></p>
 
             <div className="mt-6">
               <p className="text-gray-500">Redirecting to your dashboard...</p>
