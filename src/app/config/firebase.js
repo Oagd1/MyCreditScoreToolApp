@@ -9,8 +9,17 @@ import {
   onAuthStateChanged, 
   updateProfile
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  collection, 
+  addDoc 
+} from "firebase/firestore";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { format } from "date-fns"; // Ensure date-fns is installed
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -29,64 +38,56 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
-/** 🔹 Login with Email */
-export const logIn = async (email, password) => {
-  try {
-    console.log(`🔑 Logging in user: ${email}`);
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log("✅ Login successful!");
-    return userCredential.user;
-  } catch (error) {
-    console.error("❌ Login failed:", error.message);
-    throw error;
-  }
-};
+/** 🔹 Function to Generate Realistic Credit History */
+const generateCreditHistory = () => {
+    const history = [];
+    let baseScore = 500; // Start with a base score
 
-/** 🔹 Google Sign-In */
-export const googleSignIn = async () => {
-  try {
-    console.log("🔵 Signing in with Google...");
-    const result = await signInWithPopup(auth, provider);
-
-    // Store user in Firestore if not already there
-    const userRef = doc(db, "users", result.user.uid);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) {
-      await setDoc(userRef, { 
-        userName: result.user.displayName, 
-        email: result.user.email,
-        profilePicture: result.user.photoURL || "", // Store profile pic if available
-      });
+    for (let i = 5; i >= 0; i--) { // Generate past 6 months' history
+        let fluctuation = Math.floor(Math.random() * 20 - 10); // Simulate small score changes
+        baseScore = Math.max(300, Math.min(710, baseScore + fluctuation)); // Keep within range
+        history.push({
+            date: format(new Date(new Date().setMonth(new Date().getMonth() - i)), "dd-MM-yyyy"), // Format date
+            score: baseScore
+        });
     }
-
-    console.log("✅ Google Sign-in successful!");
-    return result.user;
-  } catch (error) {
-    console.error("❌ Google sign-in failed:", error.message);
-    throw error;
-  }
+    return history;
 };
 
-/** 🔹 Sign-Up with Email (Stores userName, Full Name, DOB) */
+/** 🔹 Sign-Up with Email (Stores User + Credit History) */
 export const signUp = async (email, password, userName, fullName, dateOfBirth) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
     
+    // Format DOB before saving
+    const formattedDOB = format(new Date(dateOfBirth), "dd-MM-yyyy");
+
     // Update Firebase Auth Profile
-    await updateProfile(userCredential.user, { displayName: userName });
+    await updateProfile(user, { displayName: userName });
 
     // Store user data in Firestore
-    const userRef = doc(db, "users", userCredential.user.uid);
+    const userRef = doc(db, "users", user.uid);
+    const creditHistory = generateCreditHistory();
+
     await setDoc(userRef, { 
       userName, 
       fullName, 
       email, 
-      dateOfBirth, 
+      dateOfBirth: formattedDOB, // Ensure consistent format
+      creditScore: creditHistory[creditHistory.length - 1].score, // Latest score
+      lastUpdated: new Date().toISOString(),
       profilePicture: "" // Placeholder for profile picture
     });
 
-    console.log("✅ Sign-up successful!");
-    return userCredential.user;
+    // Store credit history in a subcollection
+    const historyRef = collection(userRef, "creditHistory");
+    for (const entry of creditHistory) {
+        await addDoc(historyRef, entry);
+    }
+
+    console.log("✅ Sign-up successful! Credit history stored.");
+    return user;
   } catch (error) {
     console.error("❌ Sign-up failed:", error.message);
     throw error;
@@ -102,65 +103,6 @@ export const getUserData = async (uid) => {
   } catch (error) {
     console.error("❌ Error fetching user data:", error.message);
     return null;
-  }
-};
-
-/** 🔹 Update User Profile (userName, Full Name, DOB, Profile Picture) */
-export const updateUserProfile = async (userName, fullName, dateOfBirth) => {
-  try {
-    if (!auth.currentUser) throw new Error("No user is signed in.");
-
-    // Update Firebase Auth Profile
-    await updateProfile(auth.currentUser, { displayName: userName });
-
-    // Ensure Firestore document exists before updating
-    const userRef = doc(db, "users", auth.currentUser.uid);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) {
-      await setDoc(userRef, { userName, fullName, dateOfBirth, profilePicture: "" });
-    } else {
-      await updateDoc(userRef, { userName, fullName, dateOfBirth });
-    }
-
-    console.log("✅ Profile updated successfully!");
-    return "Profile updated successfully!";
-  } catch (error) {
-    console.error("❌ Error updating profile:", error.message);
-    throw error;
-  }
-};
-
-/** 🔹 Upload Profile Picture */
-export const uploadProfilePicture = async (file) => {
-  try {
-    if (!auth.currentUser) throw new Error("No user is signed in.");
-
-    console.log(`📤 Uploading profile picture for ${auth.currentUser.uid}...`);
-
-    const storageRef = ref(storage, `profilePictures/${auth.currentUser.uid}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    return new Promise((resolve, reject) => {
-      uploadTask.on(
-        "state_changed",
-        null,
-        (error) => reject(error),
-        async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          await updateProfile(auth.currentUser, { photoURL: downloadURL });
-
-          // Update Firestore profile picture URL
-          const userRef = doc(db, "users", auth.currentUser.uid);
-          await updateDoc(userRef, { profilePicture: downloadURL });
-
-          console.log("✅ Profile picture uploaded successfully!");
-          resolve(downloadURL);
-        }
-      );
-    });
-  } catch (error) {
-    console.error("❌ Profile picture upload failed:", error.message);
-    throw error;
   }
 };
 
