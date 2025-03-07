@@ -1,31 +1,35 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Line, Bar } from "react-chartjs-2";
+import { Line, Pie } from "react-chartjs-2";
 import * as framer from "framer-motion";
 const { motion } = framer;
 
 import { auth, db } from "../config/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { useTheme } from "../../context/themeContext"; // ✅ Import Theme Context
+
 import {
   Chart as ChartJS,
   LineElement,
-  BarElement,
   CategoryScale,
   LinearScale,
   PointElement,
   Tooltip,
   Legend,
+  ArcElement,
 } from "chart.js";
 
-// Chart.js registration
-ChartJS.register(LineElement, BarElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
+ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend, ArcElement);
 
 export default function CreditHealth() {
+  const { theme } = useTheme();
   const [creditScore, setCreditScore] = useState<number | null>(null);
   const [historicalData, setHistoricalData] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -43,9 +47,9 @@ export default function CreditHealth() {
         const score = userSnap.data().creditScore;
         setCreditScore(score);
 
-        const simulatedHistory = Array.from({ length: 6 }, (_, i) => {
-          return score - Math.floor(Math.random() * 50) + i * 5;
-        });
+        const simulatedHistory = Array.from({ length: 6 }, (_, i) =>
+          score - Math.floor(Math.random() * 50) + i * 5
+        );
         setHistoricalData(simulatedHistory);
       }
       setLoading(false);
@@ -60,107 +64,106 @@ export default function CreditHealth() {
       {
         label: "Credit Score Trend",
         data: [...historicalData, creditScore],
-        fill: false,
+        fill: true,
         borderColor: "#4CAF50",
         tension: 0.4,
         pointRadius: 6,
         pointBackgroundColor: "#4CAF50",
+        backgroundColor: "rgba(76, 175, 80, 0.2)",
       },
     ],
   };
 
-  const barChartData = {
-    labels: ["Payment History", "Credit Utilization", "Credit Age", "Debt Ratio", "Credit Mix"],
+  const pieChartData = {
+    labels: [
+      "Payment History",
+      "Credit Utilization",
+      "Credit Age",
+      "Debt Ratio",
+      "Credit Mix",
+    ],
     datasets: [
       {
         label: "Impact on Credit Score",
         data: [35, 25, 15, 15, 10],
-        backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
-        borderRadius: 5,
+        backgroundColor: [
+          "#FF6384",
+          "#36A2EB",
+          "#FFCE56",
+          "#4BC0C0",
+          "#9966FF",
+        ],
       },
     ],
   };
 
   return (
-    <motion.div
-      className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100 p-4 md:p-8"
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8 }}
-    >
-      <div className="bg-blue-600 text-white p-6 md:p-8 rounded-xl text-center shadow-md mb-6">
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">Understand Your Credit Health</h1>
-        <p className="text-md md:text-lg">Track your score, analyze trends, and improve financial well-being.</p>
+    <motion.div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 text-black dark:text-white">
+      {/* HERO SECTION */}
+      <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-6 md:p-8 rounded-xl text-center shadow-sm dark:shadow-md mb-8">
+        <h1 className="text-3xl md:text-4xl font-bold mb-2">
+          Understand Your Credit Health
+        </h1>
+        <p className="text-md md:text-lg">
+          Track your score, analyze trends, and improve your financial well-being.
+        </p>
       </div>
 
-      <motion.div
-        className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6 text-center"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6 }}
-      >
-        <h2 className="text-xl md:text-2xl font-semibold mb-3">🎥 Learn About Credit Health</h2>
-        <iframe
-          width="100%"
-          height="300"
-          src="https://www.youtube.com/embed/DSqorm91Wgg"
-          title="Be Smart About Your Credit Health"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="rounded-md"
-        ></iframe>
-      </motion.div>
+      {/* LEARN ABOUT CREDIT HEALTH */}
+      <div className="max-w-6xl mx-auto mb-8">
+        <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-sm dark:shadow-md">
+          <h2 className="text-xl md:text-2xl font-semibold mb-3">
+            🎥 Learn About Credit Health
+          </h2>
+          <iframe
+            width="100%"
+            height="300"
+            src="https://www.youtube.com/embed/DSqorm91Wgg"
+            title="Be Smart About Your Credit Health"
+            frameBorder="0"
+            allowFullScreen
+            className="rounded-md"
+          ></iframe>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <motion.div
-          className="bg-white p-4 md:p-6 rounded-lg shadow-md"
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">📈 Credit Score Trend</h2>
+      {/* YOUR CREDIT SCORE AND REPORT */}
+      <div className="max-w-6xl mx-auto mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md dark:shadow-md">
+          <h2 className="text-xl font-bold mb-1 text-gray-800 dark:text-gray-200 text-center">
+            Your credit score and report
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300 text-center mb-4">
+            We get weekly updates from Equifax
+          </p>
+          <div className="flex flex-col md:flex-row items-center justify-between bg-white dark:bg-gray-700 rounded-lg p-6 shadow-md">
+            <div className="flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full border-4 border-blue-600 dark:border-blue-400 flex items-center justify-center text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {creditScore !== null ? creditScore : "--"}
+              </div>
+            </div>
+            <div className="mt-4 md:mt-0 text-center">
+              <p className="text-lg font-semibold text-gray-800 dark:text-gray-300">Equifax</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SCORE TREND & FACTOR BREAKDOWN */}
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-sm dark:shadow-md">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3">
+            📈 Credit Score Trend
+          </h2>
           <Line data={lineChartData} />
-        </motion.div>
-
-        <motion.div
-          className="bg-white p-4 md:p-6 rounded-lg shadow-md"
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">📊 Credit Factor Breakdown</h2>
-          <Bar data={barChartData} />
-        </motion.div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-sm dark:shadow-md">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3">
+            🍰 Credit Factor Breakdown
+          </h2>
+          <Pie data={pieChartData} />
+        </div>
       </div>
-
-      <motion.div
-        className="bg-white p-4 md:p-6 rounded-lg shadow-md mt-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <h2 className="text-xl font-semibold text-gray-800 mb-3">✅ Next Steps</h2>
-        <ul className="space-y-3 text-gray-700">
-          <li>🔗 <strong>Link Your Bank Account:</strong> Gain insights into your financial habits.</li>
-          <li>👤 <strong>Verify Your Information:</strong> Ensure your credit report is accurate.</li>
-          <li>📊 <strong>Review Your Credit Mix:</strong> Diversify to boost your score.</li>
-        </ul>
-      </motion.div>
-
-      <motion.div
-        className="bg-blue-50 p-4 md:p-6 rounded-lg shadow-sm mt-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <h2 className="text-xl font-semibold text-blue-700 mb-2">💡 Personalized Insights</h2>
-        <ul className="list-disc ml-5 text-gray-700 space-y-1">
-          <li>Your score improved by {Math.abs(historicalData[5] - creditScore!)} points in the last 6 months.</li>
-          <li>Reduce credit utilization for further improvements.</li>
-          <li>On-time payments have a positive impact on your score.</li>
-        </ul>
-      </motion.div>
     </motion.div>
   );
 }

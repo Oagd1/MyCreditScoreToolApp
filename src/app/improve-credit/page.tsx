@@ -1,28 +1,43 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bar } from "react-chartjs-2";
+import { Bar, Pie, Line } from "react-chartjs-2";
 import { motion } from "framer-motion";
+import * as Dialog from "@radix-ui/react-dialog";
 import { auth, db } from "../config/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import Navbar from "../../components/navbar";
+import { useTheme } from "../../context/themeContext"; // ✅ Dark mode support
 import {
   Chart as ChartJS,
   BarElement,
+  ArcElement,
+  PieController,
   CategoryScale,
   LinearScale,
   Tooltip,
   Legend,
+  LineElement,
+  PointElement,
 } from "chart.js";
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+ChartJS.register(BarElement, ArcElement, PieController, CategoryScale, LinearScale, Tooltip, Legend, LineElement, PointElement);
 
 export default function ImproveCredit() {
+  const { theme } = useTheme(); 
   const [creditScore, setCreditScore] = useState<number | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState("Improve Your Score");
-  const [loading, setLoading] = useState(true);
+  const [chartType, setChartType] = useState("bar");
+  const [forecastModalOpen, setForecastModalOpen] = useState(false);
+  const [forecastScore, setForecastScore] = useState<number>(0);
   const router = useRouter();
+
+  const videos = [
+    { title: "Credit Scores 101", url: "https://www.youtube.com/embed/XYZ123" },
+    { title: "Building Credit from Scratch", url: "https://www.youtube.com/embed/ABC456" },
+    { title: "Credit Utilization Explained", url: "https://www.youtube.com/embed/DEF789" },
+    { title: "How to Avoid Common Mistakes", url: "https://www.youtube.com/embed/GHI101" }
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,143 +46,95 @@ export default function ImproveCredit() {
         router.push("/login");
         return;
       }
-
+      
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
-
+      
       if (userSnap.exists()) {
         const score = userSnap.data().creditScore;
         setCreditScore(score);
-
-        const personalizedSuggestions = score < 600
-          ? [
-              "📉 Reduce credit utilization below 30%",
-              "⏰ Make on-time payments consistently",
-              "💼 Keep older accounts open for credit age boost",
-            ]
-          : [
-              "📊 Maintain low credit utilization",
-              "📚 Diversify your credit mix",
-              "🚫 Limit new credit applications",
-            ];
-
-        setSuggestions(personalizedSuggestions);
+        setForecastScore(score);
       }
-      setLoading(false);
     };
 
     fetchData();
   }, [router]);
 
-  const barChartData = {
-    labels: ["Payment History", "Credit Utilization", "Credit Age", "Debt Ratio", "Credit Mix"],
-    datasets: [
-      {
-        label: "Impact on Credit Score",
-        data: [35, 25, 15, 15, 10],
-        backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
-      },
-    ],
-  };
-
   return (
-    <motion.div
-      className="min-h-screen bg-gradient-to-r from-green-50 to-teal-100 p-6"
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8 }}
-    >
-      {/* 🌟 Hero Section */}
-      <div className="bg-green-700 text-white p-8 rounded-xl text-center shadow-lg mb-6">
-        <h1 className="text-4xl font-bold mb-2">🌟 Improve Your Credit Score</h1>
-        <p className="text-lg">Get personalized tips and actionable insights to boost your score.</p>
-      </div>
+    <div className={`min-h-screen ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
+      <Navbar />
 
-      {/* 🔀 Filter Tabs */}
-      <div className="flex justify-center space-x-4 mb-6">
-        {["Improve Your Score", "Credit Basics", "Avoid Mistakes", "Clear the Jargon"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-full transition ${
-              activeTab === tab ? "bg-green-600 text-white" : "bg-white text-gray-700"
-            }`}
-          >
-            {tab}
-          </button>
+      <motion.div className={`p-8 rounded-xl shadow-md mt-20 mb-6 text-center ${theme === "dark" ? "bg-gray-800 text-gray-200" : "bg-white text-gray-900"}`}>
+        <h1 className="text-4xl font-bold mb-2">Improve Your Credit Score</h1>
+        <p className="text-lg">Take control of your credit with tailored insights and actions.</p>
+        <button 
+          onClick={() => setForecastModalOpen(true)}
+          className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow-md transition"
+        >
+          Take Charge of Your Credit
+        </button>
+      </motion.div>
+
+      {/* Video Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 mx-auto max-w-5xl">
+        {videos.map((video, index) => (
+          <div key={index} className={`p-4 rounded-lg shadow ${theme === "dark" ? "bg-gray-800" : "bg-gray-100"}`}>
+            <iframe
+              className="w-full h-40 rounded-lg"
+              src={video.url}
+              title={video.title}
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+            <p className="text-center mt-2 font-medium">{video.title}</p>
+          </div>
         ))}
       </div>
 
-      {/* 🎥 Video Section */}
-      {activeTab === "Improve Your Score" && (
-        <motion.div
-          className="bg-white p-4 rounded-lg shadow-md mb-6 text-center"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6 }}
+      {/* Credit Factor Breakdown Section */}
+      <motion.div className={`p-6 rounded-lg shadow-md text-center mt-10 ${theme === "dark" ? "bg-gray-800 text-gray-200" : "bg-white text-gray-900"}`}>
+        <h2 className="text-2xl font-semibold mb-4">Credit Factor Breakdown</h2>
+        <button
+          onClick={() => setChartType(chartType === "bar" ? "pie" : "bar")}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md mb-4 transition"
         >
-          <h2 className="text-2xl font-semibold mb-4">🎥 Credit Tips for Students</h2>
-          <iframe
-            width="100%"
-            height="400"
-            src="https://www.youtube.com/embed/71iaNlskCc0"
-            title="Credit Tips for Students"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="rounded-md shadow-lg"
-          ></iframe>
-        </motion.div>
-      )}
+          {chartType === "bar" ? "Switch to Pie Chart" : "Switch to Bar Chart"}
+        </button>
+        <div className="flex justify-center">
+          <div className="w-[80%] max-w-[400px]">
+            {chartType === "bar" ? (
+              <Bar 
+                data={{ 
+                  labels: ["Payment History", "Credit Utilization", "Credit Age", "Debt Ratio", "Credit Mix"], 
+                  datasets: [{ label: "Impact on Credit Score", data: [35, 25, 15, 15, 10], backgroundColor: ["#4C82F7", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"], borderRadius: 5 }]
+                }} 
+              />
+            ) : (
+              <Pie 
+                data={{ 
+                  labels: ["Payment History", "Credit Utilization", "Credit Age", "Debt Ratio", "Credit Mix"], 
+                  datasets: [{ data: [35, 25, 15, 15, 10], backgroundColor: ["#4C82F7", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"], borderRadius: 5 }]
+                }} 
+              />
+            )}
+          </div>
+        </div>
+      </motion.div>
 
-      {/* 📊 Credit Factor Breakdown */}
-      {activeTab === "Credit Basics" && (
-        <motion.div
-          className="bg-white p-6 rounded-lg shadow-md mb-6"
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">📊 Credit Factor Breakdown</h2>
-          <Bar data={barChartData} />
-        </motion.div>
-      )}
-
-      {/* ✅ Personalized Suggestions */}
-      {activeTab === "Avoid Mistakes" && (
-        <motion.div
-          className="bg-white p-4 rounded-lg shadow-md mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">✅ Personalized Suggestions</h2>
-          <ul className="space-y-4 text-gray-700">
-            {suggestions.map((suggestion, index) => (
-              <li key={index} className="flex items-center gap-2">
-                👉 {suggestion}
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-      )}
-
-      {/* 📚 Clear the Jargon (Glossary) */}
-      {activeTab === "Clear the Jargon" && (
-        <motion.div
-          className="bg-white p-4 rounded-lg shadow-md"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">📚 Credit Jargon Simplified</h2>
-          <ul className="list-disc ml-6 text-gray-700 space-y-2">
-            <li><strong>Credit Utilization:</strong> The ratio of your credit card balance to the credit limit.</li>
-            <li><strong>Hard Inquiry:</strong> A credit check that can slightly affect your credit score.</li>
-            <li><strong>Credit Mix:</strong> Having different types of credit accounts (e.g., loans, cards).</li>
-          </ul>
-        </motion.div>
-      )}
-    </motion.div>
+      {/* Forecast Modal */}
+      <Dialog.Root open={forecastModalOpen} onOpenChange={setForecastModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
+          <Dialog.Content className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-6 rounded-lg shadow-md ${theme === "dark" ? "bg-gray-800 text-gray-200" : "bg-white text-gray-900"}`}>
+            <Dialog.Title className="text-lg font-bold">Take Charge of Your Credit</Dialog.Title>
+            <Dialog.Description className="mt-2">
+              Discover personalized strategies to boost your credit score and financial well-being.
+            </Dialog.Description>
+            <button className="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md" onClick={() => setForecastModalOpen(false)}>Close</button>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </div>
   );
 }

@@ -38,6 +38,32 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
+/** 🔹 Function to Update User Profile */
+export const updateUserProfile = async (userName, fullName, dateOfBirth) => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No authenticated user found.");
+  }
+
+  try {
+    // Update Firebase Authentication Profile
+    await updateProfile(user, { displayName: userName });
+
+    // Update Firestore User Data in 'personalInfo'
+    const userRef = doc(db, "users", user.uid);
+    await updateDoc(userRef, {
+      "personalInfo.userName": userName,
+      "personalInfo.fullName": fullName,
+      "personalInfo.dateOfBirth": dateOfBirth,
+      "personalInfo.lastUpdated": new Date().toISOString(),
+    });
+    console.log("✅ Profile updated successfully.");
+  } catch (error) {
+    console.error("❌ Error updating profile:", error.message);
+    throw error;
+  }
+};
+
 /** 🔹 Function to Generate Realistic Credit History */
 const generateCreditHistory = () => {
     const history = [];
@@ -54,33 +80,34 @@ const generateCreditHistory = () => {
     return history;
 };
 
-/** 🔹 Sign-Up with Email (Stores User + Credit History) */
+/** 🔹 Function to Handle User Sign-Up */
 export const signUp = async (email, password, userName, fullName, dateOfBirth) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
-    // Format DOB before saving
     const formattedDOB = format(new Date(dateOfBirth), "dd-MM-yyyy");
 
-    // Update Firebase Auth Profile
     await updateProfile(user, { displayName: userName });
 
-    // Store user data in Firestore
     const userRef = doc(db, "users", user.uid);
     const creditHistory = generateCreditHistory();
 
     await setDoc(userRef, { 
-      userName, 
-      fullName, 
       email, 
-      dateOfBirth: formattedDOB, // Ensure consistent format
-      creditScore: creditHistory[creditHistory.length - 1].score, // Latest score
-      lastUpdated: new Date().toISOString(),
-      profilePicture: "" // Placeholder for profile picture
+      createdAt: new Date().toISOString(),
+      personalInfo: {
+        userName, 
+        fullName, 
+        dateOfBirth: formattedDOB
+      },
+      security: {
+        passwordUpdatedAt: new Date().toISOString(),
+        twoFactorEnabled: false
+      },
+      creditScore: creditHistory[creditHistory.length - 1].score,
+      profilePicture: ""
     });
 
-    // Store credit history in a subcollection
     const historyRef = collection(userRef, "creditHistory");
     for (const entry of creditHistory) {
         await addDoc(historyRef, entry);
@@ -94,7 +121,28 @@ export const signUp = async (email, password, userName, fullName, dateOfBirth) =
   }
 };
 
-/** 🔹 Fetch User Data from Firestore */
+/** 🔹 Other Firebase Functions */
+export const logIn = async (email, password) => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log("✅ Login successful!", userCredential.user);
+    return userCredential.user;
+  } catch (error) {
+    console.error("❌ Login failed:", error.message);
+    throw error;
+  }
+};
+
+export const googleSignIn = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
+  } catch (error) {
+    console.error("❌ Google sign-in failed:", error.message);
+    throw error;
+  }
+};
+
 export const getUserData = async (uid) => {
   try {
     const userRef = doc(db, "users", uid);
@@ -106,10 +154,8 @@ export const getUserData = async (uid) => {
   }
 };
 
-/** 🔹 Logout */
 export const logOut = async () => {
   try {
-    console.log("🚪 Logging out...");
     await signOut(auth);
     console.log("✅ Logged out successfully!");
   } catch (error) {
@@ -117,7 +163,6 @@ export const logOut = async () => {
   }
 };
 
-/** 🔹 Listen for Authentication Changes */
 export const onAuthChange = (callback) => {
   return onAuthStateChanged(auth, callback);
 };

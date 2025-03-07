@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "../config/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { format } from "date-fns"; // Ensure date-fns is installed
 
 const steps = [
   "Welcome",
@@ -23,7 +24,7 @@ export default function Onboarding() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    dob: "",
+    dob: "", // Will be formatted
     creditAccounts: 0,
     totalDebt: 0,
     monthlyIncome: 0,
@@ -52,7 +53,9 @@ export default function Onboarding() {
             ...prevData,
             fullName: userSnap.data().fullName || "",
             email: userSnap.data().email || "",
-            dob: userSnap.data().dob || "",
+            dob: userSnap.data().dob 
+              ? format(new Date(userSnap.data().dob), "dd-MM-yyyy") // Ensure consistent format
+              : "",
           }));
         }
       } catch (err) {
@@ -91,13 +94,37 @@ export default function Onboarding() {
       const user = auth.currentUser;
       if (!user) throw new Error("User not logged in.");
 
-      const userRef = doc(db, "users", user.uid);
-      await setDoc(userRef, { onboarding: formData }, { merge: true });
+      // Format DOB before saving
+      const formattedDOB = formData.dob ? format(new Date(formData.dob), "dd-MM-yyyy") : "";
 
-      alert("✅ Onboarding Completed! Redirecting to Credit Score Calculation...");
+      // Ensure all form inputs are properly converted to numbers
+      const userData = {
+        fullName: formData.fullName,
+        email: formData.email,
+        dob: formattedDOB, // 🔥 Store consistently formatted DOB
+        creditAccounts: Number(formData.creditAccounts) || 0,
+        totalDebt: Number(formData.totalDebt) || 0,
+        monthlyIncome: Number(formData.monthlyIncome) || 0,
+        missedPayments: Number(formData.missedPayments) || 0,
+        latePayments: Number(formData.latePayments) || 0,
+        recentInquiries: Number(formData.recentInquiries) || 0,
+      };
+
+      const userRef = doc(db, "users", user.uid);
+
+      // 🔥 Save onboarding data to Firestore with a lastUpdated timestamp
+      await setDoc(userRef, { 
+        onboarding: userData, 
+        lastUpdated: new Date().toISOString() 
+      }, { merge: true });
+
+      console.log("✅ Onboarding data saved successfully.");
+
+      // 🔥 Redirect to calculate-score
       router.push("/calculate-score");
-    } catch (err: any) {
-      console.error("Error saving data:", err);
+
+    } catch (err) {
+      console.error("❌ Error saving onboarding data:", err);
       setError("Failed to save onboarding data.");
     } finally {
       setLoading(false);
@@ -157,7 +184,7 @@ export default function Onboarding() {
             name="dob"
             className="w-full p-3 border rounded-lg"
             value={formData.dob}
-            disabled
+            onChange={handleChange}
           />
           <button onClick={nextStep} className="w-full bg-blue-600 text-white p-3 rounded-lg">
             Next →
@@ -233,12 +260,6 @@ export default function Onboarding() {
             Complete Onboarding
           </button>
         </div>
-      )}
-
-      {step > 0 && (
-        <button onClick={prevStep} className="mt-4 text-gray-500">
-          ← Back
-        </button>
       )}
     </div>
   );

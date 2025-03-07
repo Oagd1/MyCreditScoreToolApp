@@ -2,78 +2,21 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "../config/firebase";
-import { doc, getDoc, setDoc, collection, addDoc } from "firebase/firestore";
-import { format } from "date-fns"; // Ensure date-fns is installed
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { format } from "date-fns";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";
+import { useTheme } from "../../context/themeContext"; 
 
 export default function CalculateScore() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [creditScore, setCreditScore] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const [dob, setDob] = useState(""); // Store formatted DOB
+  const [dob, setDob] = useState("");
 
-  /** ✅ Fetch User Financial Data & Store Credit History */
-  useEffect(() => {
-    const fetchFinancialData = async () => {
-      setLoading(true);
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          setError("User not logged in.");
-          router.push("/login");
-          return;
-        }
-
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists() || !userSnap.data().onboarding) {
-          setError("No financial data found. Complete onboarding first.");
-          router.push("/onboarding");
-          return;
-        }
-
-        const userData = userSnap.data().onboarding;
-        console.log("Fetched User Data:", userData); // Debug log
-
-        // 🔹 Format DOB properly
-        const rawDob = userSnap.data().dateOfBirth || "";
-        const formattedDob = rawDob ? format(new Date(rawDob), "dd-MM-yyyy") : "N/A";
-        setDob(formattedDob); // Update state
-
-        // 🔥 Calculate New Credit Score
-        const calculatedScore = calculateCreditScore(userData);
-        setCreditScore(isNaN(calculatedScore) ? null : calculatedScore); // Handle NaN gracefully
-
-        // ✅ Save the latest score in Firestore
-        await setDoc(userRef, { creditScore: calculatedScore }, { merge: true });
-
-        // ✅ Ensure `creditHistory` subcollection exists & add historical record
-        const historyRef = collection(db, "users", user.uid, "creditHistory");
-        await addDoc(historyRef, {
-          timestamp: new Date().toISOString(), // Store full timestamp for better tracking
-          score: calculatedScore,
-        });
-
-        console.log("✅ Credit history updated in Firestore.");
-
-        // 🔥 Redirect after short delay
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 5000);
-
-      } catch (err) {
-        console.error("❌ Error fetching data:", err);
-        setError("Failed to load financial data.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFinancialData();
-  }, [router]);
-
-  /** ✅ Fixed: Define calculateCreditScore function properly */
+  /** ✅ Fixed: Ensure `calculateCreditScore` is defined before calling `fetchFinancialData` */
   const calculateCreditScore = (data: any): number => {
     let score = 300; // Base Score
 
@@ -85,8 +28,8 @@ export default function CalculateScore() {
     const creditAccounts = data.creditAccounts || 0;
     const oldestAccountAge = data.oldestAccountAge || 0;
     const totalDebt = data.totalDebt || 0;
-    const monthlyIncome = data.monthlyIncome || 1; // Prevent division by zero
-    const availableCredit = data.availableCredit || 1; // Prevent division by zero
+    const monthlyIncome = data.monthlyIncome || 1;
+    const availableCredit = data.availableCredit || 1;
     const recentInquiries = data.recentInquiries || 0;
 
     // ✅ Payment History (40%)
@@ -126,39 +69,112 @@ export default function CalculateScore() {
     score += balanceScore;
     score += newCreditScore;
     score += availableCreditScore;
-
-    // Apply Penalties
     score -= dtiPenalty;
-
-    // Apply Bonuses
     score += (noMissedPaymentsBonus + lowUtilizationBonus + creditAgeBonus);
-
-    console.log("Calculated Score:", score); // Debug log
 
     return Math.max(0, Math.min(Math.round(score), 710)); // Ensure score is within 0-710 range
   };
 
+  useEffect(() => {
+    const fetchFinancialData = async (uid: string) => {
+      try {
+        const userRef = doc(db, "users", uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          setError("No financial data found. Complete onboarding first.");
+          router.push("/onboarding");
+          return;
+        }
+
+        const userData = userSnap.data();
+        console.log("✅ Fetched User Data:", userData);
+
+        if (!userData.onboarding) {
+          setError("Onboarding data is missing. Please complete onboarding.");
+          router.push("/onboarding");
+          return;
+        }
+
+        const rawDob = userData.dateOfBirth || "";
+        setDob(rawDob ? format(new Date(rawDob), "dd-MM-yyyy") : "N/A");
+
+        let calculatedScore = userData.creditScore || calculateCreditScore(userData.onboarding);
+        setCreditScore(calculatedScore);
+
+        if (!userData.creditScore) {
+          await updateDoc(userRef, { creditScore: calculatedScore });
+          const historyRef = collection(db, "users", uid, "creditHistory");
+          await addDoc(historyRef, {
+            timestamp: serverTimestamp(),
+            score: calculatedScore,
+          });
+
+          console.log("✅ Credit history updated in Firestore.");
+        }
+      } catch (err) {
+        console.error("❌ Error fetching data:", err);
+        setError("Failed to load financial data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchFinancialData(user.uid);
+      } else {
+        setError("User not logged in.");
+        router.push("/login");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const getScoreColor = (score: number) => {
+    if (score < 450) return "text-red-500";
+    if (score < 600) return "text-yellow-500";
+    if (score < 700) return "text-green-500";
+    return "text-blue-500";
+  };
+
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-md text-center">
-        <h2 className="text-2xl font-bold text-blue-600">Your Credit Score</h2>
+    <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className={`p-6 rounded-lg shadow-md text-center 
+        ${theme === "dark" ? "bg-gray-800 text-white" : "bg-white text-gray-900"}`}>
+
+        <h2 className="text-2xl font-bold text-blue-600 dark:text-yellow-400">Your Credit Score</h2>
 
         {loading ? (
-          <p className="text-gray-600 mt-4">Calculating your score...</p>
+          <p className="text-gray-600 dark:text-gray-300 mt-4">Calculating your score...</p>
         ) : error ? (
           <p className="text-red-500">{error}</p>
-        ) : creditScore === null ? (
-          <p className="text-red-500">Unable to calculate credit score. Please check your financial data.</p>
         ) : (
           <>
-            <p className="text-4xl font-semibold mt-4">{creditScore}</p>
-            <p className="text-gray-600 mt-2">
-              Based on your financial data, your TransUnion-style credit score is calculated.
-            </p>
+            <div className="w-32 h-32 mx-auto mt-4">
+              <CircularProgressbar
+                value={creditScore || 0}
+                maxValue={710}
+                text={`${creditScore}`}
+                styles={buildStyles({
+                  textColor: theme === "dark" ? "#fff" : "#000",
+                  pathColor: getScoreColor(creditScore!),
+                  trailColor: theme === "dark" ? "#374151" : "#E5E7EB",
+                })}
+              />
+            </div>
+
             <p className="text-gray-500 mt-4">Date of Birth: <strong>{dob}</strong></p>
 
             <div className="mt-6">
-              <p className="text-gray-500">Redirecting to your dashboard...</p>
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="px-6 py-3 text-white font-semibold rounded-lg transition-all 
+                  bg-blue-600 hover:bg-blue-700 dark:bg-yellow-500 dark:hover:bg-yellow-400 dark:text-black"
+              >
+                Go to Dashboard
+              </button>
             </div>
           </>
         )}

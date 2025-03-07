@@ -6,11 +6,12 @@ import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Box, Typography, CircularProgress } from "@mui/material";
-import { CreditCard, Shield, TrendingUp, ErrorOutline, CheckCircle } from "@mui/icons-material";
+import { Shield, TrendingUp, ErrorOutline, CheckCircle } from "@mui/icons-material";
 
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [firstName, setFirstName] = useState("User"); // Default to "User"
   const [creditScore, setCreditScore] = useState<number | null>(null);
   const [percentage, setPercentage] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,14 @@ export default function Dashboard() {
 
       if (userSnap.exists()) {
         const data = userSnap.data();
+
+        // Extract First Name from fullName
+        if (data.personalInfo && data.personalInfo.fullName) {
+          const fullName = data.personalInfo.fullName;
+          const firstNameExtracted = fullName.split(" ")[0]; // Get first name
+          setFirstName(firstNameExtracted || "User");
+        }
+
         setCreditScore(data.creditScore);
         setPercentage((data.creditScore / 710) * 100);
 
@@ -53,10 +62,11 @@ export default function Dashboard() {
   };
 
   const generateInsights = (data: any) => {
+    if (!data) return;
     const dynamicInsights = [];
 
     // ✅ Credit Utilization
-    if (data.creditUtilization < 30) {
+    if (parseInt(data.creditUtilization) < 30) {
       dynamicInsights.push({
         title: "Great Credit Utilization",
         description: "You're maintaining a low credit usage, which boosts your score!",
@@ -71,7 +81,7 @@ export default function Dashboard() {
     }
 
     // ✅ Payment History
-    if (data.missedPayments === 0 && data.latePayments === 0) {
+    if (parseInt(data.missedPayments) === 0 && parseInt(data.latePayments) === 0) {
       dynamicInsights.push({
         title: "Excellent Payment History",
         description: "No missed or late payments! This greatly improves your credit health.",
@@ -86,7 +96,7 @@ export default function Dashboard() {
     }
 
     // ✅ Debt-to-Income Ratio
-    const debtToIncome = data.totalDebt / (data.monthlyIncome || 1);
+    const debtToIncome = parseInt(data.totalDebt) / (parseInt(data.monthlyIncome) || 1);
     if (debtToIncome < 0.4) {
       dynamicInsights.push({
         title: "Healthy Debt-to-Income Ratio",
@@ -113,99 +123,50 @@ export default function Dashboard() {
   };
 
   const scoreCategory = getScoreCategory(creditScore);
-  const username = user?.email ? user.email.split("@")[0] : "User";
 
   return (
-    <div
-      className="relative min-h-screen bg-cover bg-center bg-no-repeat text-gray-900"
-      style={{
-        backgroundImage: "url('/background.jpg')",
-        backgroundAttachment: "fixed",
-      }}
-    >
+    <div className="relative min-h-screen bg-cover bg-center bg-no-repeat text-gray-900"
+         style={{ backgroundImage: "url('/background.jpg')", backgroundAttachment: "fixed" }}>
       <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-
       <div className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto px-6">
-        <motion.h2
-          initial={{ opacity: 0, y: -15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-5xl font-extrabold text-white mt-24"
-          style={{ textShadow: "2px 2px 8px rgba(0, 0, 0, 0.6)" }}
-        >
-          Welcome, {username}
+
+        <motion.h2 initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }}
+                   transition={{ duration: 0.6, delay: 0.2 }}
+                   className="text-5xl font-extrabold text-white mt-24">
+          Welcome, {firstName}
         </motion.h2>
 
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          className="relative mt-8 flex flex-col items-center"
-        >
+        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.8 }} className="relative mt-8 flex flex-col items-center">
           <Box position="relative" display="inline-flex">
-            <CircularProgress
-              variant="determinate"
-              value={creditScore !== null ? percentage : 0}
-              size={180}
-              thickness={5}
-              sx={{ color: scoreCategory.color }}
-            />
-            <Box
-              position="absolute"
-              top="50%"
-              left="50%"
-              sx={{
-                transform: "translate(-50%, -50%)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <Typography variant="h4" fontWeight="bold" color="white">
-                {creditScore !== null ? creditScore : "N/A"}
-              </Typography>
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  backgroundColor: `${scoreCategory.color}30`,
-                  color: scoreCategory.color,
-                  px: 2,
-                  py: 0.5,
-                  borderRadius: "8px",
-                  fontWeight: "bold",
-                }}
-              >
+            <CircularProgress variant="determinate" value={creditScore !== null ? percentage : 0}
+                              size={180} thickness={5} sx={{ color: scoreCategory.color }} />
+            <Box position="absolute" top="50%" left="50%"
+                 sx={{ transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Typography variant="h4" fontWeight="bold" color="white">{creditScore ?? "N/A"}</Typography>
+              <Typography variant="subtitle1" className="bg-opacity-50 rounded-xl px-2 py-1 font-bold"
+                          sx={{ backgroundColor: `${scoreCategory.color}30`, color: scoreCategory.color }}>
                 {scoreCategory.label}
               </Typography>
             </Box>
           </Box>
         </motion.div>
 
-        <p className="text-lg mt-4 font-medium text-white">Your current credit score</p>
-
-        {error && <p className="text-red-500 mt-4">{error}</p>}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.3 }}
+                        className="mt-8 max-w-4xl bg-gray-100 p-6 rounded-lg shadow-lg">
+          <h2 className="text-3xl font-bold mb-4 text-gray-800">Latest Insights</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {insights.map((insight, index) => (
+              <div key={index} className="p-4 bg-white shadow rounded-xl text-center hover:bg-gray-100 transition-all">
+                <div className="mb-3 bg-gray-200 p-3 rounded-full inline-block">{insight.icon}</div>
+                <h3 className="text-lg font-semibold">{insight.title}</h3>
+                <p className="text-gray-700">{insight.description}</p>
+              </div>
+            ))}
+          </div>
+        </motion.section>
       </div>
-
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-        className="relative max-w-5xl mx-auto py-8 px-6 bg-white bg-opacity-90 rounded-xl shadow-xl backdrop-blur-md mt-12"
-      >
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">Latest Insights</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {insights.map((insight, index) => (
-            <motion.div
-              key={index}
-              className="p-6 bg-white shadow-lg rounded-xl flex flex-col items-center text-center hover:shadow-2xl transition transform hover:scale-105 duration-300"
-            >
-              {insight.icon}
-              <h3 className="text-xl font-semibold text-gray-800 mt-4">{insight.title}</h3>
-              <p className="text-gray-600 mt-2">{insight.description}</p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.section>
     </div>
   );
 }
